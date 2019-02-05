@@ -1,0 +1,388 @@
+---
+title: "There is no R in Cloud"
+subtitle: "Fantastic Clouds and where to find them"
+output:
+  xaringan::moon_reader:
+    seal: false
+    chakra: libs/remark-latest.min.js
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      slideNumberFormat: ''
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(eval=FALSE)
+```
+background-image: url("presentation/hC1.gif")
+background-size: cover
+class: middle, center
+
+# There is no R in Cloud
+### Fantastic Clouds and where to find them
+### Adnan Fiaz
+#### @tapundemek
+
+.footnote[
+Slides by xaringan
+]
+---
+background-image: url("presentation/me.jpg")
+class: left, top
+# Introduction
+
+???
+
+I'm a Data Scientist / Developer. I worked in the airline industry for a long time before I started working for Mango Solutions. That was until last year and I now work in the adtech business.  
+
+I've used R for about 5 years now (I remember a time when there was no dplyr) but I also occasionally use python. I love to explore the boundaries of what is possible with both languages. Which is why I'm so excited to give this talk today. 
+
+As for the topic of this talk, I heard an advice the other day about how you should make a presentation and then re-use it a couple of times to get better at presenting it. I thought that was a really good advice. So I put all my presentations aside and made one about a topic I just learned a month ago. 
+
+---
+background-image: url("presentation/cloud_platforms.png")
+background-size: cover
+class: left, top
+
+
+
+
+???
+The topic in question is cloud platforms and how you use them with R in a typical workflow. I'm going to cover three platforms: GCP, Azure, AWS. I've chosen these because there are a number of R packages that support working with them, it is not a comparison of cloud platforms !!! Most of these packages are developed by the cloudyr project, which is the main source and inspiration for this presentation.
+
+---
+background-image: url("presentation/google_cloud_overview.png")
+background-size: 98% 98%
+???
+
+Before we jump in let's first make sure we're all talking about the same thing.
+This is a slide from the Google Cloud Data Engineering Specialization on Coursera.
+It gives a good overview of what cloud computing is and where it's headed.
+
+Cloud computing basically means you have a piece of hardware somewhere that you don't physically have sit in front to use it. For example, if I put a supercomputer in my garage and access it through my laptop then that would be cloud computing as per the first wave. 
+
+What is the benefit? Mostly the computation power I get from the supercomputer that I can't from my laptop. When we move on to the second wave, where I put the supercomputer in someone else's garage, I add the benefit of not having to worry about the electricity provider or physical security. If you now also remove the part where I had to sort out the hardware for the supercomputer, you end up with where we are now. Meaning I can get a virtual supercomputer by specifying what I want and the cloud provider sorts out the rest. I won't know and don't care where it is, what hardware it's running on and who makes sure it keeps on running.
+
+The final step and the point at which it all becomes useful to us users is the Third Wave. Which is the point at which we start talking about the tasks we want to do or problems we want to solve. Things like "I want to store a TB of data and have access to it from all over the world in milliseconds" or "I want to perform this very complex calculation every day". What we're talking about is services that allow you to do these things. No supercomputer setup or configuration instructions. 
+
+This is also where the current cloud platforms come into play. There are plenty cloud providers that do what is described in the Second Wave. There are however only a few that are able to do what is described in the Third Wave. They are able to do this because it is something they're already doing internally. Google were already performing complex calculations, Amazon were already moving around terabytes of data. They just found a way to monetize existing practices, to our benefit of course. 
+
+Any questions? 
+Ok, so now we have a understanding of what I mean by Cloud, let's have a look at where R enters the picture. Things are easier to explain with an example so I'm going to look at the classic hotdog or not image classification task. 
+---
+background-image: url("presentation/dogs_airplane.jpg")
+background-size: cover
+class: class: center, top
+
+# The Task: hot dog or not
+
+
+???
+
+Some of you may know this task from the tv show "Silicon Valley" and there have been many implementations of it since. For example, David Selby used this task to explain neural networks in R, you can find it on his blog "Tea & Stats". 
+
+So the task is to classify a dog as being hot or not. I know what you're thinking, isn't that very subjective? Well yes and no. Every year there is a competition for the World's Ugliest Dog and I'm assuming they have some very expert judges. 
+
+---
+
+class: right, bottom, inverse
+
+# The Data
+.pull-left[
+![](presentation/dog.1587.jpg)
+]
+.pull-right[
+![](presentation/53.jpg)
+]
+
+???
+Now that we're clear on the task, the next step is to discuss the data and where we're going to store it. For the "not hot" category I scraped images from the World's Ugliest Dog competition. For the "hot dog" category I used data from the kaggle dogs vs cats competition. 
+
+You've survived 4 or 5 slides without code so let's have a look at how and where can store this data for each of the three platforms. Obviously this is a trivial amount of data but the code works for both small and large datasets.
+
+---
+
+# The Data: Google Cloud Platform
+
+- Authentication
+- Package: **googleCloudStorageR**
+- Creating buckets:
+```{r}
+library(googleCloudStorageR)
+gcs_create_bucket("hot-dog", "hot-dog")
+```
+
+- Uploading files:
+```{r}
+gcs_upload("train/hotdog/dog-1.jpg", "hot-dog")
+```
+
+- Downloading files:
+```{r}
+gcs_get_object("train/hotdog/dog-1.jpg", bucket="hot-dog", 
+               saveToDisk = "dog-1.jpg")
+```
+
+
+???
+Before you can communicate in any way with the cloud platform you need to authenticate. Basically the equivalent of logging in but programmatically doing it. I've found this to be the hardest part of working with the platforms. 
+For GCP, authentication is done by creating a service account and downloading the associated json file. You can create an global variable pointing at the json file. All the GCP R-packages look for the global variable.
+
+The other thing you need to worry about is the project-id. The cloud platforms each have their own way of organising things. For GCP this is organisations at the top level and then projects on the next level. And finally underneath the project are the actual services.
+
+As to storage the first thing you need is a bucket. This is just a top-level directory but one that can hold all sorts of objects. 
+If you have you're files locally somewhere you can upload them. Or more likely is that all your training data will be in a bucket and you can download a batch of them. 
+
+What I found particularly appealing is that you can save your workspace in a bucket and load it in at a later time. Also you can save entire R scripts and source them locally.
+
+---
+
+# The Data: Microsoft Azure
+
+- Package: **AzureStor**
+- Authentication
+```{r}
+library(AzureStor)
+az <- get_azure_login("393b8381-7309-4f8c-bd70-2698e0cc6f9c")
+sub <- az$get_subscription("a4174174-050b-459f-a3a1-fc23876d79fa")
+rg <- sub$get_resource_group("hotdog")
+```
+- Create file share:
+```{r}
+# first create storage account
+stor <- rg$create_storage_account("hotdogstorage")
+# retrieve file endpoint (there is also a blob endpoints)
+file_endp <- stor$get_file_endpoint()
+file_share <- create_file_share(file_endp, "hot-dog")
+```
+
+???
+The story is somewhat different for Azure. The package is built upon R6 classes so that makes the syntax of authentication different. Also Azure's organisation of services is named differently, with a subscription at the top level followed by a resource group. To make use of the storage service you also need to create a storage account. And then finally can you create a bucket or file share.
+
+---
+
+# The Data: Microsoft Azure
+
+- Uploading files:
+```{r}
+create_azure_dir(file_share, "train/hotdog")
+multiupload_azure_file(file_share, src="data/train/hotdog/*.*", 
+                       dest="train/hotdog")
+```
+
+- Downloading files:
+```{r}
+download_azure_file(fshare, src="train/hotdog/dog.1.jpg", 
+                    dest="dog1.jpg")
+```
+
+???
+
+The nice thing about the AzureStor package is that you can upload/download multiple files, parallel to eachother. 
+---
+# The Data: Amazon Web Services
+
+- Package: **aws.s3**
+- Authentication
+- Create bucket:
+```{r}
+library(aws.s3)
+put_bucket("hot-dog")
+```
+
+- Uploading files:
+```{r}
+put_object("data/train/hotdog/dog.1.jpg", bucket="hot-dog")
+```
+
+- Downloading files:
+```{r}
+save_object("validation/hotdog/dog.1001.jpg", bucket="hot-dog", 
+            file = "dog1.jpg")
+```
+
+???
+Again authentication works differently for AWS. You have to create an user account within a group with a security policy. All very complication but I guess it's more aimed at the enterprise user. After getting the access keys for the user you can authenticate via global variables much like the GCP R-packages. 
+
+The functions to upload/download files speak for themselves and with aws.s3 you can also save your workspace on to a bucket, load your workspace from a bucket and source R scripts from a bucket.
+
+---
+background-image: url("presentation/aircraft_cockpit.jpg")
+background-size: cover
+class: center, bottom, inverse
+# The Analysis
+
+
+???
+Ok, so hopefully you've had your fix of code for now. I won't go into that level of detail for the next set of packages. 
+The next step in a typical workflow is to analyse you data. That doesn't really work with the example of hot dog or not. I have a set of images but I don't really need to analyze them.
+
+For the sake of argument however, imagine you had a dataset you wanted to wrangle. Doing that on your laptop/desktop isn't working out (not enough memory or speed) so why not do it in the Cloud. On the next slides I'm going to get a supercomputer and put RStudio on it.
+
+And yes, there is RStudio Cloud (but still in alpha)
+
+---
+
+# The Analysis: RStudio on Steroids
+
+- GCP (**googleComputeEngineR**):
+```{r}
+library(googleComputeEngineR)
+vm <- gce_vm(template = "rstudio", predefined_type="n1-highcpu-4",
+             name = "rstudio-server", username = "thisisnot", 
+             password = "notmypassword")
+```
+- Azure (**AzureVM**)
+```{r}
+library(AzureVM)
+myVM <- rg$create_vm("mylinuxvm3", os="Ubuntu",
+                           username="adnan",
+                           passkey="BristolR2019",
+                           userauth_type="password")
+
+myVM$run_script('sudo rstudio-server start')
+```
+???
+Opening up RStudio is actually dead easy with googleComputeEngineR. This package allows you to launch any kind of virtual machine on GCP. You can manually specify what you want (cpu's, memory, software) or you can use a template. Here I'm using the RStudio template but templates exist for base R or Shiny. 
+Once launched I can simply browse to the URL and access RStudio with the username/password.
+
+For Azure the story is pretty much the same except it doesn't rely on templates. Instead it launches the DSVM by default. The DSVM is jam-packed with all the software you can possibly think of: R, Python, TensorFlow, XGBoost, RStudio, Jupyter Notebook etc.
+
+Unfortunately it doesn't launch RStudio automatically, you have to send it a bash command to make sure it does. Double unfortunately, the current template doesn't configure the network properly which means the port RStudio needs is still blocked. You can manually fix this but that kind of defeats the point. I'm going to file an issue with them about it.
+
+---
+# The Analysis: RStudio on Steroids
+
+- AWS (**aws.ec2**)
+```{r}
+# http://www.louisaslett.com/RStudio_AMI/
+image <- "ami-061a59e27c8da0b93"
+i <- run_instances(image = image, 
+                   type = "t2.micro")
+```
+
+???
+
+As for AWS, it has a long history of virtual computing. Within AWS it is better known as Elastic Compute and it's version of templates are called Amazone Machine Images (AMI). Because it's been around for so long there is even a marketplace for all sorts of AMI's, including one for RStudio. The package aws.ec2 allows us to deploy any AMI onto a virtual machine of our choice.
+
+Unfortunately I could not get this working and I found AWS too hard to fix it.
+---
+# The Actual Analysis
+
+- What about my cloud analysis?
+- There is **bigrquery**...
+- ...and **dbplot**
+
+???
+
+So you can do all the complex analyses you want in the RStudio environment but are there any cloud tools that can help you? And more importantly are there R packages to help you?
+
+Well, I'm a big fan of Big Query. It's not just a DWH in the Cloud but it's designed to allow you to do quick analyses. With the bigrquery package you can perform sql queries on large datasets. You can even pretend you're doing SQL with dplyr commands. 
+
+Part of the analyses is of course making visualisations. But with large data that is difficult and I only have a partial solution. The dbplot package enables you to make plots of aggregated such as histograms. The calculation of the actual values is deferred to the datasource. 
+
+
+---
+background-image: url("presentation/clouds-outer-space.jpg")
+background-size: cover
+# The (Machine) Learning
+
+???
+Now it's time for the part of the presentation I'm the most excited about. Not because of the cool algorithms or techniques but because the ML services provided by the cloud platforms take away some of the burden of the training and deployment process. We can now also finally come to the solution of our hot-dog or not task.
+
+---
+
+# GCP: ML Engine
+
+- Package: **cloudml**
+- Specify TensorFlow model in separate script (`fewda_vgg16.R`)
+- Training:
+```{r}
+library(cloudml)
+cloudml_train("fewda_vgg16.R", master_type = "standard_gpu", collect=FALSE)
+```
+- Deploy:
+```{r}
+cloudml_deploy("savedmodel", name="hotdog")
+```
+- Predict:
+```{r}
+dogimg <- keras::image_to_array("testdog.jpg")
+cloudml_predict(list(dogimg), name="hotdog")
+```
+
+???
+So the most mature package in this area is hands down the cloudml package. Unlike all the preseding package this one makes use of the google cloud sdk and therefore requires python and reticulate. 
+
+The way it works is that you specify your tensorflow model in R script. Yes it has to be tensorflow and you have to specify such that it trains the model when the R script is sourced. Then simply call cloudml_train and the script is shipped to GCP where the model is with whatever powerful computer you deemed necessary. 
+
+If within the R script you also exported the model, you can then deploy it on as an API in ML Engine. That means Google takes care of the entire backend for you. Finally you can consume the API by calling cloudml_predict.
+
+---
+background-image: url("presentation/cloud_question_mark.jpg")
+background-size: cover
+# Azure & AWS
+
+???
+Both Azure and AWS have a Machine Learning service but there is no mature R package for it, not like cloudml. If that's not a problem for you, or you prefer the UI then feel free to check them out. They offer a similar service as GCP in the form of training and deploying your model.
+
+You also always deploy your model as a normal API using plumber.
+---
+
+# Cloud API's
+
+- Vision
+  - Rooglevision
+  - aws.rekognition
+- NLP
+  - googleLanguageR
+  - aws.comprehend
+- Speech
+  - googleLanguageR
+  - aws.polly
+- Translation
+  - googleLanguageR
+  - aws.translate
+
+???
+Besides allowing you to train your own models, all of the cloud platforms have opened up some of their own models. They have sort of connected them to their cloud platforms, presumably to make authentication and monitoring easy. 
+
+There are a few R packages that wrap these API's (googleLanguageR (ropensci), Rooglevision, aws.polly, aws.comprehend). None are for Azure though but if it's just an API you can always write the httr code yourself.
+
+---
+
+# Other
+
+- Digital Ocean (**analogsea**)
+- IBM (no R packages)
+- Any I missed?
+
+???
+GCP, Azure and AWS aren't the only cloud platforms out there of course.
+
+Digital Ocean is a cloud provider, mainly for compute. There is an R package for it but I haven't tried it out so do so at your own risk.
+
+IBM sadly has no R packages that I know of or could find. Having worked with IBM Cloud I did not see any support for R either.
+
+Have I missed any?
+
+---
+
+background-image: url("presentation/hC1.gif")
+background-size: cover
+class: middle, center
+## There is <sub>ai</sub>R in Clouds
+
+???
+In summary, the cloudyr project is doing a great job in providing the R user with access to various functionalities of the Cloud platforms. It's not 100% there yet but it makes life a lot easier. Try it out for yourself!
+
+Any questions?
+
+.footnote[
+Adnan Fiaz 
+<br>
+@tapundemek
+]
